@@ -1,0 +1,265 @@
+# Portkey Gateway Helm Chart Values for OpenShift
+# https://github.com/Portkey-AI/gateway
+
+# -- Number of gateway replicas
+replicaCount: 1
+
+image:
+  # -- Gateway image repository
+  repository: portkeyai/gateway
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Image tag (defaults to appVersion)
+  tag: ""
+
+# -- Image pull secrets for private registries
+imagePullSecrets: []
+
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full release name
+fullnameOverride: ""
+
+serviceAccount:
+  # -- Create a ServiceAccount
+  create: true
+  # -- Annotations for the ServiceAccount
+  annotations: {}
+  # -- ServiceAccount name (auto-generated if not set)
+  name: ""
+
+# -- Pod annotations
+podAnnotations: {}
+
+# -- Pod labels
+podLabels: {}
+
+# OpenShift Security Context - compatible with restricted-v2 SCC
+podSecurityContext:
+  # -- Run as non-root (required for OpenShift)
+  runAsNonRoot: true
+  # -- Let OpenShift assign the UID from namespace range
+  # runAsUser: <leave empty for OpenShift>
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  # -- Prevent privilege escalation
+  allowPrivilegeEscalation: false
+  # -- Drop all capabilities
+  capabilities:
+    drop:
+      - ALL
+  # -- Read-only root filesystem
+  readOnlyRootFilesystem: true
+  # -- Run as non-root
+  runAsNonRoot: true
+
+service:
+  # -- Service type
+  type: ClusterIP
+  # -- Service port
+  port: 8787
+
+# OpenShift Route configuration
+route:
+  # -- Create an OpenShift Route
+  enabled: true
+  # -- Route hostname (leave empty for auto-generated)
+  host: ""
+  # -- Route path
+  path: /
+  # -- TLS configuration
+  tls:
+    # -- Enable TLS
+    enabled: true
+    # -- TLS termination type: edge, passthrough, or reencrypt
+    termination: edge
+    # -- Insecure edge termination policy: Allow, Redirect, or None
+    insecureEdgeTerminationPolicy: Redirect
+  # -- Route annotations
+  annotations: {}
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  # -- Enable HPA
+  enabled: false
+  # -- Minimum replicas
+  minReplicas: 1
+  # -- Maximum replicas
+  maxReplicas: 10
+  # -- Target CPU utilization percentage
+  targetCPUUtilizationPercentage: 80
+  # -- Target memory utilization percentage
+  targetMemoryUtilizationPercentage: 80
+
+# -- Node selector
+nodeSelector: {}
+
+# -- Tolerations
+tolerations: []
+
+# -- Affinity rules
+affinity: {}
+
+# Gateway environment variables
+env:
+  # -- Service name identifier
+  SERVICE_NAME: "portkey-gateway"
+  # -- Log level: debug, info, warn, error
+  LOG_LEVEL: "info"
+  # -- Port to listen on
+  PORT: "8787"
+
+# -- Additional environment variables from secrets
+envSecrets: {}
+  # Example:
+  # OPENAI_API_KEY:
+  #   secretName: portkey-api-keys
+  #   secretKey: openai-api-key
+
+# -- Additional environment variables (raw)
+extraEnv: []
+  # Example:
+  # - name: MY_VAR
+  #   value: "my-value"
+
+# Secrets for API keys
+secrets:
+  # -- Create secrets for API keys
+  create: true
+  # -- OpenAI API key
+  openaiApiKey: ""
+  # -- Azure OpenAI API key
+  azureApiKey: ""
+  # -- Anthropic API key
+  anthropicApiKey: ""
+  # -- Google AI API key
+  googleApiKey: ""
+  # -- Cohere API key
+  cohereApiKey: ""
+  # -- Additional custom API keys
+  custom: {}
+    # Example:
+    # MY_PROVIDER_KEY: "key-value"
+
+# Health check probes
+# Portkey gateway uses TCP socket check as it doesn't have a dedicated /health endpoint
+livenessProbe:
+  tcpSocket:
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  tcpSocket:
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Redis configuration (Bitnami sub-chart)
+redis:
+  # -- Enable Redis deployment
+  enabled: true
+  # -- Redis architecture: standalone or replication
+  architecture: standalone
+  
+  image:
+    # -- Use latest tag for broader compatibility
+    tag: latest
+  
+  auth:
+    # -- Enable Redis authentication
+    enabled: true
+    # -- Redis password (auto-generated if empty)
+    password: ""
+  
+  master:
+    # -- Redis persistence
+    persistence:
+      enabled: true
+      size: 1Gi
+    
+    # OpenShift-compatible security context
+    podSecurityContext:
+      enabled: true
+      fsGroup: null
+    containerSecurityContext:
+      enabled: true
+      runAsUser: null
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Redis URL override (if using external Redis)
+  # externalUrl: "redis://external-redis:6379"
+
+# Cache configuration
+cache:
+  # -- Enable caching
+  enabled: true
+  # -- Cache TTL in seconds
+  ttl: 3600
+
+# Ollama configuration (local LLM)
+ollama:
+  # -- Enable Ollama deployment
+  enabled: true
+  
+  image:
+    # -- Ollama image repository
+    repository: ollama/ollama
+    # -- Ollama image tag
+    tag: latest
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+  
+  # -- Model to pull on startup (e.g., llama3, mistral, codellama)
+  model: "llama3"
+  
+  # -- Resource limits and requests
+  resources:
+    requests:
+      memory: "8Gi"
+      cpu: "2"
+    limits:
+      memory: "16Gi"
+      cpu: "4"
+  
+  # -- Persistence for downloaded models
+  persistence:
+    enabled: false
+    size: 20Gi
+    # storageClass: ""
+  
+  # -- Node selector (useful for GPU nodes)
+  nodeSelector: {}
+  
+  # -- Tolerations
+  tolerations: []
+

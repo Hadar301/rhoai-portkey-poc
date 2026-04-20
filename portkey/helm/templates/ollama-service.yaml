@@ -1,0 +1,21 @@
+{{- if .Values.ollama.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "portkey-gateway.fullname" . }}-ollama
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "portkey-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+spec:
+  type: ClusterIP
+  ports:
+    - port: 11434
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "portkey-gateway.name" . }}-ollama
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
