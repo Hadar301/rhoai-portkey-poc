@@ -1,0 +1,30 @@
+apiVersion: v2
+name: portkey-gateway
+description: Portkey AI Gateway for OpenShift - Open source AI gateway for routing requests to 250+ LLMs
+type: application
+version: 0.1.0
+appVersion: "1.15.1"
+
+keywords:
+  - portkey
+  - ai-gateway
+  - llm
+  - openai
+  - anthropic
+  - openshift
+
+home: https://portkey.ai
+sources:
+  - https://github.com/Portkey-AI/gateway
+  - https://github.com/Portkey-AI/helm
+
+maintainers:
+  - name: Portkey AI
+    url: https://portkey.ai
+
+dependencies:
+  - name: redis
+    version: "18.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+

@@ -1,0 +1,72 @@
+# Portkey Gateway Helm Chart Makefile
+# For deploying Portkey AI Gateway on OpenShift
+
+CHART_DIR := helm
+RELEASE_NAME ?= portkey-gateway
+NAMESPACE ?= portkey
+VALUES_FILE ?= $(CHART_DIR)/values.yaml
+
+.PHONY: help
+help: ## Show this help message
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+.PHONY: helm-deps
+helm-deps: ## Download chart dependencies (Redis)
+	cd $(CHART_DIR) && helm dependency update
+
+.PHONY: helm-lint
+helm-lint: ## Lint the Helm chart
+	helm lint $(CHART_DIR)
+
+.PHONY: helm-template
+helm-template: ## Render chart templates locally for debugging
+	helm template $(RELEASE_NAME) $(CHART_DIR) \
+		--namespace $(NAMESPACE) \
+		-f $(VALUES_FILE)
+
+.PHONY: helm-install
+helm-install: helm-deps ## Install the Helm chart on OpenShift
+	helm upgrade --install $(RELEASE_NAME) $(CHART_DIR) \
+		--namespace $(NAMESPACE) \
+		--create-namespace \
+		-f $(VALUES_FILE)
+
+.PHONY: helm-upgrade
+helm-upgrade: ## Upgrade an existing Helm release
+	helm upgrade $(RELEASE_NAME) $(CHART_DIR) \
+		--namespace $(NAMESPACE) \
+		-f $(VALUES_FILE)
+
+.PHONY: helm-uninstall
+helm-uninstall: ## Uninstall the Helm release
+	helm uninstall $(RELEASE_NAME) --namespace $(NAMESPACE)
+
+.PHONY: helm-status
+helm-status: ## Show the status of the Helm release
+	helm status $(RELEASE_NAME) --namespace $(NAMESPACE)
+
+.PHONY: helm-values
+helm-values: ## Show the computed values for the release
+	helm get values $(RELEASE_NAME) --namespace $(NAMESPACE)
+
+.PHONY: oc-logs
+oc-logs: ## Tail logs from gateway pods
+	oc logs -n $(NAMESPACE) -l app.kubernetes.io/name=portkey-gateway -f
+
+.PHONY: oc-pods
+oc-pods: ## List gateway pods
+	oc get pods -n $(NAMESPACE) -l app.kubernetes.io/name=portkey-gateway
+
+.PHONY: oc-route
+oc-route: ## Get the gateway route URL
+	@oc get route $(RELEASE_NAME) -n $(NAMESPACE) -o jsonpath='{.spec.host}'
+	@echo ""
+
+.PHONY: oc-health
+oc-health: ## Check gateway health
+	@curl -s "https://$$(oc get route $(RELEASE_NAME) -n $(NAMESPACE) -o jsonpath='{.spec.host}')/health"
+
+.PHONY: clean
+clean: ## Clean up generated files
+	rm -rf $(CHART_DIR)/charts $(CHART_DIR)/Chart.lock
+
