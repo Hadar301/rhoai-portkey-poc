@@ -15,14 +15,15 @@ Usage:
 import argparse
 import sys
 import time
+import traceback
 from collections import Counter
 from pathlib import Path
 from typing import Optional, Tuple
 
+from portkey_ai import Portkey
+
 # Add parent directory for config import
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from portkey_ai import Portkey
 
 import config as base_config
 from load_balance.config import (
@@ -62,7 +63,11 @@ class LoadBalanceMetrics:
 
     def get_summary(self) -> dict:
         avg_latency = self.total_latency / self.total_requests if self.total_requests > 0 else 0
-        success_rate = (self.successful_requests / self.total_requests * 100) if self.total_requests > 0 else 0
+        success_rate = (
+            (self.successful_requests / self.total_requests * 100)
+            if self.total_requests > 0
+            else 0
+        )
 
         return {
             "total_requests": self.total_requests,
@@ -72,14 +77,12 @@ class LoadBalanceMetrics:
             "avg_latency": avg_latency,
             "min_latency": min(self.latencies) if self.latencies else 0,
             "max_latency": max(self.latencies) if self.latencies else 0,
-            "distribution": dict(self.provider_distribution)
+            "distribution": dict(self.provider_distribution),
         }
 
 
 def make_request_with_loadbalance(
-    config: dict,
-    message: str,
-    max_tokens: int = 100
+    config: dict, message: str, max_tokens: int = 100
 ) -> Tuple[Optional[str], float, bool, Optional[str], Optional[str]]:
     """
     Make a chat completion request with load balancing configuration.
@@ -92,11 +95,7 @@ def make_request_with_loadbalance(
     Returns:
         Tuple of (response_content, latency, success, error_message, provider_used)
     """
-    client = Portkey(
-        base_url=GATEWAY_API_URL,
-        api_key="not-needed-for-self-hosted",
-        config=config
-    )
+    client = Portkey(base_url=GATEWAY_API_URL, api_key="not-needed-for-self-hosted", config=config)
 
     messages = [{"role": "user", "content": message}]
 
@@ -106,7 +105,7 @@ def make_request_with_loadbalance(
         response = client.chat.completions.create(
             model="llama3",  # This will be interpreted by each provider
             messages=messages,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
         )
         latency = time.time() - start_time
         content = response.choices[0].message.content.strip()
@@ -114,8 +113,8 @@ def make_request_with_loadbalance(
         # Try to detect which provider was used based on response headers or metadata
         # Note: This might not be available in all Portkey versions
         provider_used = "unknown"
-        if hasattr(response, '_headers'):
-            provider_used = response._headers.get('x-portkey-provider', 'unknown')
+        if hasattr(response, "_headers"):
+            provider_used = response._headers.get("x-portkey-provider", "unknown")
 
         return content, latency, True, None, provider_used
     except Exception as e:
@@ -149,7 +148,7 @@ def test_round_robin_loadbalance() -> dict:
         "What is Docker?",
         "What is REST?",
         "What is CI/CD?",
-        "What is Kubernetes?"
+        "What is Kubernetes?",
     ]
 
     print(f"\n[Testing] Sending {num_requests} requests with round-robin load balancing...")
@@ -157,11 +156,10 @@ def test_round_robin_loadbalance() -> dict:
     metrics = LoadBalanceMetrics()
 
     for i, msg in enumerate(test_messages[:num_requests]):
-        print(f"\n[Request {i+1}/{num_requests}] '{msg[:40]}...'")
+        print(f"\n[Request {i + 1}/{num_requests}] '{msg[:40]}...'")
 
         content, latency, success, error, provider = make_request_with_loadbalance(
-            config=config,
-            message=msg
+            config=config, message=msg
         )
 
         if success:
@@ -183,14 +181,13 @@ def test_round_robin_loadbalance() -> dict:
     print(f"  - Avg latency: {summary['avg_latency']:.3f}s")
     print(f"  - Min/Max latency: {summary['min_latency']:.3f}s / {summary['max_latency']:.3f}s")
     print("\n  Provider Distribution:")
-    for provider, count in summary['distribution'].items():
-        percentage = (count / summary['total_requests'] * 100) if summary['total_requests'] > 0 else 0
+    for provider, count in summary["distribution"].items():
+        percentage = (
+            (count / summary["total_requests"] * 100) if summary["total_requests"] > 0 else 0
+        )
         print(f"    - {provider}: {count} requests ({percentage:.1f}%)")
 
-    return {
-        "test": "Round-Robin Load Balancing",
-        **summary
-    }
+    return {"test": "Round-Robin Load Balancing", **summary}
 
 
 def test_weighted_loadbalance() -> dict:
@@ -212,12 +209,11 @@ def test_weighted_loadbalance() -> dict:
     print("  Targets:")
     for i, (target, weight) in enumerate(zip(targets, weights)):
         percentage = weight * 100
-        print(f"    {i+1}. {target['provider']} - Weight: {weight} ({percentage:.0f}%)")
+        print(f"    {i + 1}. {target['provider']} - Weight: {weight} ({percentage:.0f}%)")
 
     num_requests = 10
     test_messages = [
-        f"Question {i+1}: What is the meaning of life?"
-        for i in range(num_requests)
+        f"Question {i + 1}: What is the meaning of life?" for i in range(num_requests)
     ]
 
     print(f"\n[Testing] Sending {num_requests} requests with weighted load balancing...")
@@ -225,11 +221,10 @@ def test_weighted_loadbalance() -> dict:
     metrics = LoadBalanceMetrics()
 
     for i, msg in enumerate(test_messages[:num_requests]):
-        print(f"\n[Request {i+1}/{num_requests}]")
+        print(f"\n[Request {i + 1}/{num_requests}]")
 
         content, latency, success, error, provider = make_request_with_loadbalance(
-            config=config,
-            message=msg
+            config=config, message=msg
         )
 
         if success:
@@ -248,23 +243,22 @@ def test_weighted_loadbalance() -> dict:
     print(f"  - Success rate: {summary['success_rate']:.1f}%")
     print(f"  - Avg latency: {summary['avg_latency']:.3f}s")
     print("\n  Provider Distribution:")
-    for provider, count in summary['distribution'].items():
-        actual_pct = (count / summary['total_requests'] * 100) if summary['total_requests'] > 0 else 0
+    for provider, count in summary["distribution"].items():
+        actual_pct = (
+            (count / summary["total_requests"] * 100) if summary["total_requests"] > 0 else 0
+        )
         print(f"    - {provider}: {count} requests ({actual_pct:.1f}%)")
 
     # Compare with expected distribution
     expected_dist = {
-        targets[0]['provider']: weights[0] / sum(weights) * 100,
-        targets[1]['provider']: weights[1] / sum(weights) * 100
+        targets[0]["provider"]: weights[0] / sum(weights) * 100,
+        targets[1]["provider"]: weights[1] / sum(weights) * 100,
     }
     print("\n  Expected Distribution:")
     for provider, pct in expected_dist.items():
         print(f"    - {provider}: {pct:.0f}%")
 
-    return {
-        "test": "Weighted Load Balancing",
-        **summary
-    }
+    return {"test": "Weighted Load Balancing", **summary}
 
 
 def test_distribution_analysis() -> dict:
@@ -291,12 +285,10 @@ def test_distribution_analysis() -> dict:
 
     for i in range(num_requests):
         if (i + 1) % 5 == 0:
-            print(f"  Progress: {i+1}/{num_requests} requests sent...")
+            print(f"  Progress: {i + 1}/{num_requests} requests sent...")
 
         content, latency, success, error, provider = make_request_with_loadbalance(
-            config=config,
-            message=f"Count to {i+1}",
-            max_tokens=50
+            config=config, message=f"Count to {i + 1}", max_tokens=50
         )
 
         if success:
@@ -312,17 +304,16 @@ def test_distribution_analysis() -> dict:
     print(f"  - Avg latency: {summary['avg_latency']:.3f}s")
 
     print("\n  Distribution Analysis:")
-    for provider, count in summary['distribution'].items():
-        actual_pct = (count / summary['total_requests'] * 100) if summary['total_requests'] > 0 else 0
+    for provider, count in summary["distribution"].items():
+        actual_pct = (
+            (count / summary["total_requests"] * 100) if summary["total_requests"] > 0 else 0
+        )
         expected_pct = 50.0  # For round-robin with 2 providers
         deviation = abs(actual_pct - expected_pct)
         print(f"    - {provider}: {count} requests ({actual_pct:.1f}%)")
         print(f"      Expected: {expected_pct:.0f}% | Deviation: {deviation:.1f}%")
 
-    return {
-        "test": "Distribution Analysis",
-        **summary
-    }
+    return {"test": "Distribution Analysis", **summary}
 
 
 def print_results_table(results: list[dict]):
@@ -336,7 +327,7 @@ def print_results_table(results: list[dict]):
         print(f"  - Total Requests: {r['total_requests']}")
         print(f"  - Success Rate: {r['success_rate']:.1f}%")
         print(f"  - Avg Latency: {r['avg_latency']:.3f}s")
-        if 'distribution' in r:
+        if "distribution" in r:
             print(f"  - Distribution: {r['distribution']}")
 
 
@@ -353,13 +344,13 @@ Examples:
     python load_balance_demo.py --scenario round-robin
     python load_balance_demo.py --scenario weighted
     python load_balance_demo.py --scenario distribution
-        """
+        """,
     )
     parser.add_argument(
         "--scenario",
         choices=["round-robin", "weighted", "distribution", "all"],
         default="all",
-        help="Which load balancing scenario to test (default: all)"
+        help="Which load balancing scenario to test (default: all)",
     )
 
     args = parser.parse_args()
@@ -387,7 +378,6 @@ Examples:
 
     except Exception as e:
         print(f"\n ERROR: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
 

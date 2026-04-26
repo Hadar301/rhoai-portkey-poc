@@ -73,9 +73,9 @@ uv run python load_balance_demo.py --scenario distribution
     {
       "provider": "openai",
       "api_key": "dummy-key-not-needed",
-      "custom_host": "http://llama-fp8-predictor.hacohen-llmlite:8080/v1",
+      "custom_host": "http://llama-32-1b-fp8-metrics:8080/v1",
       "weight": 0.5,
-      "override_params": {"model": "llama-fp8"}
+      "override_params": {"model": "llama-32-1b-fp8"}
     }
   ]
 }
@@ -91,7 +91,7 @@ Configuration:
   Strategy: Round-Robin (Equal Weights)
   Targets:
     1. ollama - http://portkey-gateway-ollama:11434
-    2. openai - http://llama-fp8-predictor.hacohen-llmlite:8080/v1
+    2. openai - http://llama-32-1b-fp8-metrics:8080/v1
 
 [Testing] Sending 6 requests with round-robin load balancing...
 
@@ -315,10 +315,10 @@ config = {
         {
             "provider": "openai",
             "api_key": "dummy-key-not-needed",
-            "custom_host": "http://llama-fp8-predictor.hacohen-llmlite:8080/v1",
+            "custom_host": "http://llama-32-1b-fp8-metrics:8080/v1",
             "weight": 0.5,  # 50% of traffic
             "override_params": {
-                "model": "llama-fp8"
+                "model": "llama-32-1b-fp8"
             }
         }
     ]

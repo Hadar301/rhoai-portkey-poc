@@ -1,7 +1,7 @@
 [project]
 name = "portkey-rhoai"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "Portkey AI Gateway POC for Red Hat OpenShift AI (RHOAI)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -9,5 +9,6 @@ dependencies = [
     "portkey-ai>=2.1.0",
     "python-dotenv>=1.2.1",
     "redis>=7.1.0",
+    "requests>=2.31.0",
     "tabulate>=0.9.0",
 ]

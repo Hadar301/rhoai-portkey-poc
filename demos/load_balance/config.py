@@ -11,16 +11,13 @@ from pathlib import Path
 # Add parent directory to path for config import
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from config import OLLAMA_CONFIG, LLAMA_FP8_CONFIG
 
 # =============================================================================
 # Portkey Load Balance Config Helpers
 # =============================================================================
 
-def create_loadbalance_config(
-    targets: list[dict],
-    weights: list[float] = None
-) -> dict:
+
+def create_loadbalance_config(targets: list[dict], weights: list[float] = None) -> dict:
     """
     Create a Portkey load balancing configuration.
 
@@ -45,12 +42,7 @@ def create_loadbalance_config(
     total_weight = sum(weights)
     normalized_weights = [w / total_weight for w in weights]
 
-    config = {
-        "strategy": {
-            "mode": "loadbalance"
-        },
-        "targets": []
-    }
+    config = {"strategy": {"mode": "loadbalance"}, "targets": []}
 
     for target, weight in zip(targets, normalized_weights):
         target_config = {
@@ -58,9 +50,7 @@ def create_loadbalance_config(
             "api_key": "dummy-key-not-needed",
             "custom_host": target["custom_host"],
             "weight": weight,
-            "override_params": {
-                "model": target["model"]
-            }
+            "override_params": {"model": target["model"]},
         }
         config["targets"].append(target_config)
 

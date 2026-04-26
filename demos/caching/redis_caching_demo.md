@@ -178,10 +178,10 @@ The consistent 132ms latency for cache hits includes:
 ### Prerequisites
 ```bash
 # Port-forward Redis (for local development)
-oc port-forward svc/portkey-gateway-redis-master 6379:6379 -n hacohen-portkey &
+oc port-forward svc/portkey-gateway-redis-master 6379:6379 -n your-namespace &
 
 # Get Redis password from Kubernetes secret
-export REDIS_PASSWORD=$(oc get secret portkey-gateway-redis -n hacohen-portkey \
+export REDIS_PASSWORD=$(oc get secret portkey-gateway-redis -n your-namespace \
   -o jsonpath='{.data.redis-password}' | base64 -d)
 ```
 
@@ -203,7 +203,7 @@ For production use, deploy the caching logic inside the cluster:
 
 ```python
 # No port-forward needed, use cluster-internal service
-redis_host = "portkey-gateway-redis-master.hacohen-portkey.svc.cluster.local"
+redis_host = "portkey-gateway-redis-master.your-namespace.svc.cluster.local"
 redis_port = 6379
 ```
 

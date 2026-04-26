@@ -11,7 +11,6 @@ from pathlib import Path
 # Add parent directory to path for config import
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from config import OLLAMA_CONFIG, LLAMA_FP8_CONFIG
 
 # =============================================================================
 # Fallback Test Configurations
@@ -28,10 +27,9 @@ INVALID_OLLAMA_CONFIG = {
 # Portkey Fallback Config Helpers
 # =============================================================================
 
+
 def create_fallback_config(
-    primary_config: dict,
-    fallback_config: dict,
-    on_status_codes: list[int] = None
+    primary_config: dict, fallback_config: dict, on_status_codes: list[int] = None
 ) -> dict:
     """
     Create a Portkey fallback configuration.
@@ -45,27 +43,21 @@ def create_fallback_config(
         Portkey config dictionary with fallback strategy
     """
     config = {
-        "strategy": {
-            "mode": "fallback"
-        },
+        "strategy": {"mode": "fallback"},
         "targets": [
             {
                 "provider": primary_config["provider"],
                 "api_key": "dummy-key-not-needed",
                 "custom_host": primary_config["custom_host"],
-                "override_params": {
-                    "model": primary_config["model"]
-                }
+                "override_params": {"model": primary_config["model"]},
             },
             {
                 "provider": fallback_config["provider"],
                 "api_key": "dummy-key-not-needed",
                 "custom_host": fallback_config["custom_host"],
-                "override_params": {
-                    "model": fallback_config["model"]
-                }
-            }
-        ]
+                "override_params": {"model": fallback_config["model"]},
+            },
+        ],
     }
 
     if on_status_codes:

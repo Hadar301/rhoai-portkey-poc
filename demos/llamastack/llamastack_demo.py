@@ -9,8 +9,8 @@ client = LlamaStackClient(
     api_key="not-needed",
     default_headers={
         "x-portkey-provider": "ollama",
-        "x-portkey-custom-host": "http://portkey-gateway-ollama:11434"
-    }
+        "x-portkey-custom-host": "http://portkey-gateway-ollama:11434",
+    },
 )
 
 
@@ -20,8 +20,7 @@ print("Total Available Models:", len(models))
 
 # Then use it normally
 response = client.chat.completions.create(
-    model="llama3",
-    messages=[{"role": "user", "content": "Hello!"}]
+    model="llama3", messages=[{"role": "user", "content": "Hello!"}]
 )
 
 print("\nResponse:", response.choices[0].message.content)

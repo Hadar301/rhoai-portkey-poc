@@ -16,7 +16,7 @@ import os
 # When running outside, use the route URL (get with: oc get route portkey-gateway -o jsonpath='{.spec.host}')
 GATEWAY_URL = os.environ.get(
     "PORTKEY_GATEWAY_URL",
-    "https://portkey-gateway-hacohen-portkey.apps.ai-dev02.kni.syseng.devcluster.openshift.com"
+    "https://portkey-gateway-hacohen-portkey.apps.ai-dev01.kni.syseng.devcluster.openshift.com",
 )
 
 # For SDK usage, we need the base URL without /v1
@@ -37,11 +37,39 @@ OLLAMA_CONFIG = {
     "model": "llama3",
 }
 
-# LLaMA FP8 (vLLM deployment)
+# LLaMA 3.2 1B FP8 (vLLM deployment in same namespace)
+# Note: Portkey gateway rejects FQDN (.svc.cluster.local) as "Invalid custom host".
+# Use short service names instead.
 LLAMA_FP8_CONFIG = {
     "provider": "openai",  # vLLM is OpenAI-compatible
-    "custom_host": "http://llama-fp8-predictor.hacohen-llmlite:8080/v1",
-    "model": "llama-fp8",
+    "custom_host": "http://llama-32-1b-fp8-metrics:8080/v1",
+    "model": "llama-32-1b-fp8",
+}
+
+# =============================================================================
+# RHOAI KServe Model Configurations
+# =============================================================================
+
+# RHOAI models namespace (where InferenceServices are deployed)
+RHOAI_MODELS_NAMESPACE = os.environ.get("RHOAI_MODELS_NAMESPACE", "rhoai-models")
+
+# RHOAI vLLM Model - Primary (configure via env vars or edit defaults)
+RHOAI_VLLM_PRIMARY_CONFIG = {
+    "provider": "openai",  # KServe vLLM exposes OpenAI-compatible API
+    "custom_host": os.environ.get(
+        "RHOAI_VLLM_PRIMARY_HOST", "http://llama-32-1b-fp8-metrics:8080/v1"
+    ),
+    "model": os.environ.get("RHOAI_VLLM_PRIMARY_MODEL", "llama-32-1b-fp8"),
+}
+
+# RHOAI vLLM Model - Secondary (for failover/load-balancing demos)
+# Note: Update custom_host when a secondary model is deployed
+RHOAI_VLLM_SECONDARY_CONFIG = {
+    "provider": "openai",
+    "custom_host": os.environ.get(
+        "RHOAI_VLLM_SECONDARY_HOST", "http://mistral-7b-predictor:8080/v1"
+    ),
+    "model": os.environ.get("RHOAI_VLLM_SECONDARY_MODEL", "mistralai/Mistral-7B-Instruct-v0.2"),
 }
 
 # Invalid endpoint (for fallback testing)
@@ -65,19 +93,22 @@ CACHE_MAX_AGE = 300  # seconds (5 minutes)
 # Helper Functions
 # =============================================================================
 
+
 def get_provider_config(provider_name: str = "ollama") -> dict:
     """
     Get configuration for a specific provider.
-    
+
     Args:
-        provider_name: Either "ollama" or "llama-fp8"
-        
+        provider_name: One of "ollama", "llama-fp8", "rhoai-primary", "rhoai-secondary"
+
     Returns:
         Provider configuration dictionary
     """
     providers = {
         "ollama": OLLAMA_CONFIG,
         "llama-fp8": LLAMA_FP8_CONFIG,
+        "rhoai-primary": RHOAI_VLLM_PRIMARY_CONFIG,
+        "rhoai-secondary": RHOAI_VLLM_SECONDARY_CONFIG,
     }
     return providers.get(provider_name, OLLAMA_CONFIG)
 
@@ -89,15 +120,17 @@ def print_config():
     print("=" * 60)
     print(f"Gateway URL: {GATEWAY_URL}")
     print(f"Gateway API URL: {GATEWAY_API_URL}")
-    print()
     print("Available Providers:")
     print(f"  - Ollama: {OLLAMA_CONFIG['custom_host']}")
     print(f"    Model: {OLLAMA_CONFIG['model']}")
     print(f"  - LLaMA FP8: {LLAMA_FP8_CONFIG['custom_host']}")
     print(f"    Model: {LLAMA_FP8_CONFIG['model']}")
+    print(f"  - RHOAI Primary: {RHOAI_VLLM_PRIMARY_CONFIG['custom_host']}")
+    print(f"    Model: {RHOAI_VLLM_PRIMARY_CONFIG['model']}")
+    print(f"  - RHOAI Secondary: {RHOAI_VLLM_SECONDARY_CONFIG['custom_host']}")
+    print(f"    Model: {RHOAI_VLLM_SECONDARY_CONFIG['model']}")
     print("=" * 60)
 
 
 if __name__ == "__main__":
     print_config()
-

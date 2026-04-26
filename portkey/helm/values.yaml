@@ -1,7 +1,7 @@
 # Portkey Gateway Helm Chart Values for OpenShift
 # https://github.com/Portkey-AI/gateway
 
-# -- Number of gateway replicas
+# -- Number of gateway replicas (2+ recommended for HA)
 replicaCount: 1
 
 image:
@@ -92,7 +92,7 @@ resources:
 # Horizontal Pod Autoscaler
 autoscaling:
   # -- Enable HPA
-  enabled: false
+  enabled: true
   # -- Minimum replicas
   minReplicas: 1
   # -- Maximum replicas
@@ -102,14 +102,32 @@ autoscaling:
   # -- Target memory utilization percentage
   targetMemoryUtilizationPercentage: 80
 
+# Pod Disruption Budget
+podDisruptionBudget:
+  # -- Enable PDB for HA
+  enabled: true
+  # -- Minimum available pods during disruption
+  minAvailable: 1
+
 # -- Node selector
 nodeSelector: {}
 
 # -- Tolerations
 tolerations: []
 
-# -- Affinity rules
-affinity: {}
+# -- Affinity rules (pod anti-affinity recommended for HA)
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - portkey-gateway
+          topologyKey: kubernetes.io/hostname
 
 # Gateway environment variables
 env:
@@ -225,6 +243,12 @@ cache:
   enabled: true
   # -- Cache TTL in seconds
   ttl: 3600
+
+# Network Policy
+networkPolicy:
+  # -- Enable NetworkPolicy for traffic control
+  # Note: Disabled by default for compatibility. Enable after verifying DNS/egress rules.
+  enabled: false
 
 # Ollama configuration (local LLM)
 ollama:

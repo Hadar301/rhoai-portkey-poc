@@ -15,14 +15,14 @@ Usage:
 import argparse
 import sys
 import time
+import traceback
 from pathlib import Path
 from typing import Optional, Tuple
 
+from portkey_ai import Portkey
+
 # Add parent directory for config import
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from portkey_ai import Portkey
-from tabulate import tabulate
 
 import config as base_config
 from fallback.config import INVALID_OLLAMA_CONFIG, create_fallback_config
@@ -63,10 +63,7 @@ class FallbackMetrics:
 
 
 def make_request_with_fallback(
-    config: dict,
-    message: str,
-    model: str,
-    max_tokens: int = 100
+    config: dict, message: str, model: str, max_tokens: int = 100
 ) -> Tuple[Optional[str], float, bool, Optional[str]]:
     """
     Make a chat completion request with fallback configuration.
@@ -81,9 +78,7 @@ def make_request_with_fallback(
         Tuple of (response_content, latency, success, error_message)
     """
     client = Portkey(
-        base_url=GATEWAY_API_URL,
-        api_key="not-needed-for-self-hosted",
-        config=config
+        base_url=GATEWAY_API_URL, api_key="not-needed-for-self-hosted", config=config
     )
 
     messages = [{"role": "user", "content": message}]
@@ -91,9 +86,7 @@ def make_request_with_fallback(
     start_time = time.time()
     try:
         response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=max_tokens
+            model=model, messages=messages, max_tokens=max_tokens
         )
         latency = time.time() - start_time
         content = response.choices[0].message.content.strip()
@@ -104,9 +97,7 @@ def make_request_with_fallback(
 
 
 def make_request_without_fallback(
-    provider_config: dict,
-    message: str,
-    max_tokens: int = 100
+    provider_config: dict, message: str, max_tokens: int = 100
 ) -> Tuple[Optional[str], float, bool, Optional[str]]:
     """
     Make a request without fallback for comparison.
@@ -126,9 +117,7 @@ def make_request_without_fallback(
     start_time = time.time()
     try:
         response = client.chat.completions.create(
-            model=provider_config["model"],
-            messages=messages,
-            max_tokens=max_tokens
+            model=provider_config["model"], messages=messages, max_tokens=max_tokens
         )
         latency = time.time() - start_time
         content = response.choices[0].message.content.strip()
@@ -160,26 +149,23 @@ def test_simple_fallback() -> dict:
     print("  - HTTP 500/502/503 (server errors)")
     print("  - Model-specific errors")
     print("\nConfiguration that would be used:")
-    print(f"  Primary: Provider A (main)")
-    print(f"  Fallback: Provider B (backup)")
+    print("  Primary: Provider A (main)")
+    print("  Fallback: Provider B (backup)")
 
     test_message = "What is the capital of France? Answer in one word."
 
     # Show successful request with fallback config (using valid endpoints)
     print("\n[With Fallback Config] Making request...")
     config = create_fallback_config(
-        primary_config=OLLAMA_CONFIG,
-        fallback_config=OLLAMA_CONFIG
+        primary_config=OLLAMA_CONFIG, fallback_config=OLLAMA_CONFIG
     )
 
     content, latency, success, error = make_request_with_fallback(
-        config=config,
-        message=test_message,
-        model=OLLAMA_CONFIG["model"]
+        config=config, message=test_message, model=OLLAMA_CONFIG["model"]
     )
 
     if success:
-        print(f"  SUCCESS: Request handled with fallback config")
+        print("  SUCCESS: Request handled with fallback config")
         print(f"  Response: {content[:80]}...")
         print(f"  Latency: {latency:.3f}s")
     else:
@@ -189,12 +175,11 @@ def test_simple_fallback() -> dict:
     # Show direct request without fallback config
     print("\n[Without Fallback Config] Making direct request...")
     content2, latency2, success2, error2 = make_request_without_fallback(
-        provider_config=OLLAMA_CONFIG,
-        message=test_message
+        provider_config=OLLAMA_CONFIG, message=test_message
     )
 
     if success2:
-        print(f"  SUCCESS: Direct request")
+        print("  SUCCESS: Direct request")
         print(f"  Response: {content2[:80]}...")
         print(f"  Latency: {latency2:.3f}s")
     else:
@@ -227,8 +212,7 @@ def test_all_providers_fail() -> dict:
     invalid_secondary["custom_host"] = "http://another-invalid:8888"
 
     config = create_fallback_config(
-        primary_config=INVALID_OLLAMA_CONFIG,
-        fallback_config=invalid_secondary
+        primary_config=INVALID_OLLAMA_CONFIG, fallback_config=invalid_secondary
     )
 
     print("\nConfiguration:")
@@ -239,15 +223,13 @@ def test_all_providers_fail() -> dict:
 
     print("\n[Testing] Making request (expecting failure)...")
     content, latency, success, error = make_request_with_fallback(
-        config=config,
-        message=test_message,
-        model="llama3"
+        config=config, message=test_message, model="llama3"
     )
 
     if success:
-        print(f"  Unexpected success!")
+        print("  Unexpected success!")
     else:
-        print(f"  EXPECTED FAILURE: All providers exhausted")
+        print("  EXPECTED FAILURE: All providers exhausted")
         print(f"  Error: {error[:150]}")
         print(f"  Latency: {latency:.3f}s")
 
@@ -255,7 +237,7 @@ def test_all_providers_fail() -> dict:
         "test": "All Providers Fail",
         "success": success,
         "latency": latency,
-        "error": error[:100] if error else None
+        "error": error[:100] if error else None,
     }
 
 
@@ -270,8 +252,7 @@ def test_primary_success_no_fallback() -> dict:
 
     # Config with valid primary and fallback (both Ollama for this demo)
     config = create_fallback_config(
-        primary_config=OLLAMA_CONFIG,
-        fallback_config=OLLAMA_CONFIG
+        primary_config=OLLAMA_CONFIG, fallback_config=OLLAMA_CONFIG
     )
 
     print("\nConfiguration:")
@@ -283,25 +264,22 @@ def test_primary_success_no_fallback() -> dict:
     # With fallback config
     print("\n[With Fallback Config] Making request...")
     content1, latency1, success1, _ = make_request_with_fallback(
-        config=config,
-        message=test_message,
-        model=OLLAMA_CONFIG["model"]
+        config=config, message=test_message, model=OLLAMA_CONFIG["model"]
     )
 
     if success1:
-        print(f"  SUCCESS (Primary)")
+        print("  SUCCESS (Primary)")
         print(f"  Response: {content1[:80]}...")
         print(f"  Latency: {latency1:.3f}s")
 
     # Without fallback config
     print("\n[Without Fallback Config] Making request...")
     content2, latency2, success2, _ = make_request_without_fallback(
-        provider_config=OLLAMA_CONFIG,
-        message=test_message
+        provider_config=OLLAMA_CONFIG, message=test_message
     )
 
     if success2:
-        print(f"  SUCCESS (Direct)")
+        print("  SUCCESS (Direct)")
         print(f"  Response: {content2[:80]}...")
         print(f"  Latency: {latency2:.3f}s")
 
@@ -315,7 +293,7 @@ def test_primary_success_no_fallback() -> dict:
         "with_fallback_latency": latency1,
         "without_fallback_latency": latency2,
         "overhead": overhead,
-        "overhead_pct": overhead_pct
+        "overhead_pct": overhead_pct,
     }
 
 
@@ -331,8 +309,7 @@ def test_stress_fallback() -> dict:
     # Use valid primary and fallback (both Ollama) to avoid timeouts
     # This tests consistency and performance without fallback trigger
     config = create_fallback_config(
-        primary_config=OLLAMA_CONFIG,
-        fallback_config=OLLAMA_CONFIG
+        primary_config=OLLAMA_CONFIG, fallback_config=OLLAMA_CONFIG
     )
 
     print("\nConfiguration:")
@@ -347,7 +324,7 @@ def test_stress_fallback() -> dict:
         "What is Python? One sentence.",
         "What is Docker? One sentence.",
         "What is REST? One sentence.",
-        "What is CI/CD? One sentence."
+        "What is CI/CD? One sentence.",
     ]
 
     print(f"\nSending {num_requests} requests...")
@@ -355,32 +332,34 @@ def test_stress_fallback() -> dict:
     metrics = FallbackMetrics()
 
     for i, msg in enumerate(messages[:num_requests]):
-        print(f"\n[Request {i+1}/{num_requests}] {msg[:40]}...")
+        print(f"\n[Request {i + 1}/{num_requests}] {msg[:40]}...")
 
         content, latency, success, error = make_request_with_fallback(
-            config=config,
-            message=msg,
-            model=OLLAMA_CONFIG["model"]
+            config=config, message=msg, model=OLLAMA_CONFIG["model"]
         )
 
         if success:
-            metrics.record_success(latency, used_fallback=False)  # Primary should succeed
+            metrics.record_success(
+                latency, used_fallback=False
+            )  # Primary should succeed
             print(f"  SUCCESS: {content[:60]}... ({latency:.3f}s)")
         else:
             metrics.record_failure(latency)
             print(f"  FAILED: {error[:50]} ({latency:.3f}s)")
 
     # Print statistics
-    print(f"\n  Statistics:")
+    print("\n  Statistics:")
     print(f"  - Total requests: {metrics.total_requests}")
     print(f"  - Successful: {metrics.successful_requests}")
     print(f"  - Failed: {metrics.failed_requests}")
     if metrics.total_requests > 0:
-        print(f"  - Success rate: {metrics.successful_requests/metrics.total_requests*100:.1f}%")
-        print(f"  - Avg latency: {metrics.total_latency/metrics.total_requests:.3f}s")
+        print(
+            f"  - Success rate: {metrics.successful_requests / metrics.total_requests * 100:.1f}%"
+        )
+        print(f"  - Avg latency: {metrics.total_latency / metrics.total_requests:.3f}s")
     else:
-        print(f"  - Success rate: 0.0%")
-        print(f"  - Avg latency: 0.000s")
+        print("  - Success rate: 0.0%")
+        print("  - Avg latency: 0.000s")
 
     return {
         "test": "Stress Test",
@@ -388,8 +367,12 @@ def test_stress_fallback() -> dict:
         "successful": metrics.successful_requests,
         "failed": metrics.failed_requests,
         "fallback_triggered": 0,  # Not triggered in this test
-        "avg_latency": metrics.total_latency / metrics.total_requests if metrics.total_requests > 0 else 0,
-        "success_rate": metrics.successful_requests / metrics.total_requests * 100 if metrics.total_requests > 0 else 0
+        "avg_latency": metrics.total_latency / metrics.total_requests
+        if metrics.total_requests > 0
+        else 0,
+        "success_rate": metrics.successful_requests / metrics.total_requests * 100
+        if metrics.total_requests > 0
+        else 0,
     }
 
 
@@ -421,13 +404,13 @@ Examples:
     python fallback_demo.py --scenario all-fail
     python fallback_demo.py --scenario primary-success
     python fallback_demo.py --scenario stress
-        """
+        """,
     )
     parser.add_argument(
         "--scenario",
         choices=["simple", "all-fail", "primary-success", "stress", "all"],
         default="all",
-        help="Which fallback scenario to test (default: all)"
+        help="Which fallback scenario to test (default: all)",
     )
 
     args = parser.parse_args()
@@ -458,7 +441,6 @@ Examples:
 
     except Exception as e:
         print(f"\n ERROR: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
 

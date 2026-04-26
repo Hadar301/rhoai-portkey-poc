@@ -22,16 +22,17 @@ import json
 import os
 import sys
 import time
+import traceback
 from pathlib import Path
 from typing import Optional
 
 import redis
+from portkey_ai import Portkey
+from tabulate import tabulate
 
 # Add parent directory to path for config import
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from portkey_ai import Portkey
-from tabulate import tabulate
 
 from config import (
     CACHE_MAX_AGE,
@@ -88,7 +89,7 @@ class RedisCache:
             "provider": provider,
             "model": model,
             "messages": messages,
-            "params": {k: v for k, v in sorted(kwargs.items())}
+            "params": {k: v for k, v in sorted(kwargs.items())},
         }
         # Sort keys to ensure consistent hashing
         key_json = json.dumps(key_data, sort_keys=True)
@@ -164,11 +165,10 @@ def make_cached_chat_request(
         provider=provider_config["provider"],
         model=provider_config["model"],
         messages=messages,
-        **params
+        **params,
     )
 
     # Try to get from cache
-    cache_hit = False
     if use_cache:
         start_time = time.time()
         cached_response = cache.get(cache_key)
@@ -181,9 +181,7 @@ def make_cached_chat_request(
     client = create_portkey_client(provider_config)
     start_time = time.time()
     response = client.chat.completions.create(
-        model=provider_config["model"],
-        messages=messages,
-        **params
+        model=provider_config["model"], messages=messages, **params
     )
     elapsed_time = time.time() - start_time
 
@@ -236,7 +234,7 @@ def run_simple_cache_test(cache: RedisCache, provider_config: dict) -> dict:
         print(f"\n  ✓ Cache HIT! Speedup: {speedup:.1f}x faster!")
         print(f"  Saved {time1 - time2:.3f}s by using cached response")
     else:
-        print(f"\n  ✗ Cache MISS (unexpected)")
+        print("\n  ✗ Cache MISS (unexpected)")
 
     return {
         "test": "Simple Cache (Redis)",
@@ -263,17 +261,13 @@ def run_no_cache_baseline(cache: RedisCache, provider_config: dict) -> dict:
 
     # First request
     print(f"\n[Request 1] '{message1}'")
-    answer1, time1, _ = make_cached_chat_request(
-        cache, provider_config, message1, use_cache=False
-    )
+    answer1, time1, _ = make_cached_chat_request(cache, provider_config, message1, use_cache=False)
     print(f"  Response: {answer1[:80]}...")
     print(f"  Time: {time1:.3f}s")
 
     # Second request
     print(f"\n[Request 2] '{message2}'")
-    answer2, time2, _ = make_cached_chat_request(
-        cache, provider_config, message2, use_cache=False
-    )
+    answer2, time2, _ = make_cached_chat_request(cache, provider_config, message2, use_cache=False)
     print(f"  Response: {answer2[:80]}...")
     print(f"  Time: {time2:.3f}s")
 
@@ -305,7 +299,7 @@ def run_cache_persistence_test(cache: RedisCache, provider_config: dict) -> dict
     hits = []
 
     for i in range(num_requests):
-        print(f"\n[Request {i+1}]")
+        print(f"\n[Request {i + 1}]")
         answer, elapsed, hit = make_cached_chat_request(
             cache, provider_config, test_message, use_cache=True
         )
@@ -321,7 +315,7 @@ def run_cache_persistence_test(cache: RedisCache, provider_config: dict) -> dict
     speedup = first_time / avg_cached_time if avg_cached_time > 0 else 0
     hit_rate = sum(hits) / len(hits) * 100
 
-    print(f"\n  Statistics:")
+    print("\n  Statistics:")
     print(f"  - First request (MISS): {first_time:.3f}s")
     print(f"  - Avg cached requests: {avg_cached_time:.3f}s")
     print(f"  - Cache hit rate: {hit_rate:.0f}%")
@@ -345,16 +339,25 @@ def print_results_table(results: list[dict]):
 
     table_data = []
     for r in results:
-        table_data.append([
-            r["test"],
-            f"{r['first_time']:.3f}s",
-            r["first_cache"],
-            f"{r['second_time']:.3f}s",
-            r["second_cache"],
-            f"{r['speedup']:.1f}x",
-        ])
+        table_data.append(
+            [
+                r["test"],
+                f"{r['first_time']:.3f}s",
+                r["first_cache"],
+                f"{r['second_time']:.3f}s",
+                r["second_cache"],
+                f"{r['speedup']:.1f}x",
+            ]
+        )
 
-    headers = ["Test", "1st Request", "1st Cache", "2nd Request", "2nd Cache", "Speedup"]
+    headers = [
+        "Test",
+        "1st Request",
+        "1st Cache",
+        "2nd Request",
+        "2nd Cache",
+        "Speedup",
+    ]
     print("\n" + tabulate(table_data, headers=headers, tablefmt="grid"))
 
     # Summary
@@ -385,18 +388,16 @@ Environment Variables:
     REDIS_HOST - Redis host (default: portkey-gateway-redis-master)
     REDIS_PORT - Redis port (default: 6379)
     REDIS_PASSWORD - Redis password (required)
-        """
+        """,
     )
     parser.add_argument(
         "--provider",
         choices=["ollama", "llama-fp8"],
         default="ollama",
-        help="LLM provider to use (default: ollama)"
+        help="LLM provider to use (default: ollama)",
     )
     parser.add_argument(
-        "--clear-cache",
-        action="store_true",
-        help="Clear cache before running tests"
+        "--clear-cache", action="store_true", help="Clear cache before running tests"
     )
     args = parser.parse_args()
 
@@ -418,10 +419,12 @@ Environment Variables:
     if not redis_password:
         print("\n ERROR: REDIS_PASSWORD environment variable is required")
         print("Get it from the Kubernetes secret:")
-        print("  oc get secret portkey-gateway-redis -o jsonpath='{.data.redis-password}' | base64 -d")
+        print(
+            "  oc get secret portkey-gateway-redis -o jsonpath='{.data.redis-password}' | base64 -d"
+        )
         sys.exit(1)
 
-    print(f"\nRedis Configuration:")
+    print("\nRedis Configuration:")
     print(f"  Host: {redis_host}")
     print(f"  Port: {redis_port}")
     print(f"  Password: {'*' * len(redis_password)}")
@@ -432,7 +435,7 @@ Environment Variables:
             host=redis_host,
             port=redis_port,
             password=redis_password,
-            default_ttl=CACHE_MAX_AGE
+            default_ttl=CACHE_MAX_AGE,
         )
     except ConnectionError as e:
         print(f"\n ERROR: {e}")
@@ -464,7 +467,6 @@ Environment Variables:
 
     except Exception as e:
         print(f"\n ERROR: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
 

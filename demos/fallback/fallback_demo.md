@@ -380,8 +380,8 @@ response = client.chat.completions.create(
 **Solutions**:
 - Check that `PORTKEY_GATEWAY_URL` environment variable is set correctly
 - Verify LLM endpoints are accessible from the gateway
-- Check gateway logs: `oc logs -n hacohen-portkey deployment/portkey-gateway`
-- Ensure Ollama pod is running: `oc get pods -n hacohen-portkey`
+- Check gateway logs: `oc logs -n your-namespace deployment/portkey-gateway`
+- Ensure Ollama pod is running: `oc get pods -n your-namespace`
 
 ### Fallback Not Triggering
 

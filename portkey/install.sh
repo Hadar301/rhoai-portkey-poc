@@ -11,7 +11,7 @@
 set -e
 
 # Default configuration
-NAMESPACE="${1:-hacohen-portkey}"
+NAMESPACE="${1:-portkey-gateway}"
 RELEASE_NAME="portkey-gateway"
 HELM_CHART="./helm"
 OLLAMA_ENABLED="true"
