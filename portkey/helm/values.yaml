@@ -287,3 +287,58 @@ ollama:
   # -- Tolerations
   tolerations: []
 
+# vLLM model server via KServe InferenceService
+vllm:
+  # -- Enable vLLM model deployment (creates ServingRuntime + InferenceService)
+  enabled: false
+
+  # -- HuggingFace token for model downloads
+  hfToken: ""
+
+  image:
+    # -- vLLM serving image
+    repository: quay.io/ecosystem-appeng/vllm
+    # -- Image tag
+    tag: openai-v0.10.1
+
+  model:
+    # -- HuggingFace model name
+    name: "RedHatAI/granite-3.3-8b-instruct"
+
+  # -- Number of replicas
+  replicas: 1
+
+  # vLLM serving arguments
+  args:
+    # -- Number of GPUs for tensor parallelism
+    tensorParallelSize: 1
+    # -- Maximum model context length
+    maxModelLen: 4096
+    # -- Data type (auto, float16, bfloat16)
+    dtype: "bfloat16"
+    # -- Quantization method (fp8, awq, gptq, or empty to disable)
+    quantization: ""
+    # -- Additional vLLM CLI arguments
+    extra: []
+
+  # -- Resource limits and requests
+  resources:
+    requests:
+      cpu: "4"
+      memory: "24Gi"
+      nvidia.com/gpu: "1"
+    limits:
+      cpu: "8"
+      memory: "30Gi"
+      nvidia.com/gpu: "1"
+
+  # -- GPU node tolerations
+  tolerations:
+    - key: g5-gpu
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+
+  # -- Node selector (useful for targeting GPU nodes)
+  nodeSelector: {}
+
