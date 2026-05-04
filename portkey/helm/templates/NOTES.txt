@@ -109,5 +109,37 @@ Check if model is downloaded:
 
 {{- end }}
 
+{{- if .Values.vllm.enabled }}
+
+--------------------------------------------------------------------------------
+  vLLM MODEL SERVER ({{ .Values.vllm.model.name }})
+--------------------------------------------------------------------------------
+
+vLLM is deployed via KServe InferenceService.
+  Model: {{ .Values.vllm.model.name }}
+
+Get the InferenceService URL:
+  $ oc get inferenceservice {{ include "portkey-gateway.fullname" . }}-vllm -n {{ .Release.Namespace }} -o jsonpath='{.status.url}'
+
+To use the model via the Portkey Gateway:
+
+  VLLM_URL=$(oc get inferenceservice {{ include "portkey-gateway.fullname" . }}-vllm -n {{ .Release.Namespace }} -o jsonpath='{.status.url}')
+  GATEWAY_URL=$(oc get route {{ include "portkey-gateway.fullname" . }} -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}')
+
+  curl -X POST "https://${GATEWAY_URL}/v1/chat/completions" \
+    -H "Content-Type: application/json" \
+    -H "x-portkey-provider: openai" \
+    -H "x-portkey-custom-host: ${VLLM_URL}" \
+    -d '{
+      "model": "{{ .Values.vllm.model.name }}",
+      "messages": [{"role": "user", "content": "Hello!"}]
+    }'
+
+Check status:
+  $ oc get inferenceservice {{ include "portkey-gateway.fullname" . }}-vllm -n {{ .Release.Namespace }}
+  $ oc get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/component=vllm
+
+{{- end }}
+
 ================================================================================
 
