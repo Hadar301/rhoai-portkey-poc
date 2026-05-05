@@ -1,0 +1,126 @@
+{{- if .Values.vllm.enabled -}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "portkey-gateway.fullname" . }}-hf-token
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "portkey-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vllm
+type: Opaque
+data:
+  HF_TOKEN: {{ .Values.vllm.hfToken | b64enc | quote }}
+---
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: {{ include "portkey-gateway.fullname" . }}-vllm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "portkey-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vllm
+    opendatahub.io/dashboard: "true"
+  annotations:
+    opendatahub.io/apiProtocol: REST
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+    opendatahub.io/template-display-name: vLLM ServingRuntime for KServe (GPU)
+    opendatahub.io/template-name: vllm-runtime-gpu
+    openshift.io/display-name: {{ include "portkey-gateway.fullname" . }}-vllm
+spec:
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8080"
+  containers:
+    - name: kserve-container
+      image: "{{ .Values.vllm.image.repository }}:{{ .Values.vllm.image.tag }}"
+      command:
+        - python3
+        - -m
+        - vllm.entrypoints.openai.api_server
+      args:
+        - "--port"
+        - "8080"
+        - "--model"
+        - "/mnt/models"
+        - "--served-model-name"
+        - "{{ .Values.vllm.model.name }}"
+        - "--download-dir"
+        - "/vllm/model"
+        - "--tensor-parallel-size"
+        - "{{ .Values.vllm.args.tensorParallelSize }}"
+        - "--max-model-len"
+        - "{{ .Values.vllm.args.maxModelLen }}"
+        - "--dtype"
+        - "{{ .Values.vllm.args.dtype }}"
+        {{- if .Values.vllm.args.quantization }}
+        - "--quantization"
+        - "{{ .Values.vllm.args.quantization }}"
+        {{- end }}
+        {{- with .Values.vllm.args.extra }}
+        {{- range . }}
+        - "{{ . }}"
+        {{- end }}
+        {{- end }}
+      env:
+        - name: HOME
+          value: /vllm
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "portkey-gateway.fullname" . }}-hf-token
+              key: HF_TOKEN
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+        - name: vllm-home
+          mountPath: /vllm
+  multiModel: false
+  supportedModelFormats:
+    - autoSelect: true
+      name: vLLM
+  volumes:
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: "16Gi"
+    - name: vllm-home
+      emptyDir: {}
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: {{ include "portkey-gateway.fullname" . }}-vllm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "portkey-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vllm
+    networking.kserve.io/visibility: exposed
+    opendatahub.io/dashboard: "true"
+  annotations:
+    openshift.io/display-name: {{ include "portkey-gateway.fullname" . }}-vllm
+    serving.kserve.io/deploymentMode: RawDeployment
+spec:
+  predictor:
+    maxReplicas: {{ .Values.vllm.replicas | default 1 }}
+    minReplicas: {{ .Values.vllm.replicas | default 1 }}
+    model:
+      modelFormat:
+        name: vLLM
+      name: ""
+      resources:
+        {{- toYaml .Values.vllm.resources | nindent 8 }}
+      runtime: {{ include "portkey-gateway.fullname" . }}-vllm
+      storageUri: "hf://{{ .Values.vllm.model.name }}"
+    {{- with .Values.vllm.tolerations }}
+    tolerations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.vllm.nodeSelector }}
+    nodeSelector:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}

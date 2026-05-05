@@ -16,7 +16,7 @@ import os
 # When running outside, use the route URL (get with: oc get route portkey-gateway -o jsonpath='{.spec.host}')
 GATEWAY_URL = os.environ.get(
     "PORTKEY_GATEWAY_URL",
-    "https://portkey-gateway-hacohen-portkey.apps.ai-dev01.kni.syseng.devcluster.openshift.com",
+    "https://portkey-portkey-gateway-hacohen-portkey.apps.ai-dev01.kni.syseng.devcluster.openshift.com",
 )
 
 # For SDK usage, we need the base URL without /v1
@@ -33,7 +33,7 @@ else:
 # Ollama (local LLM via Portkey gateway)
 OLLAMA_CONFIG = {
     "provider": "ollama",
-    "custom_host": "http://portkey-gateway-ollama:11434",
+    "custom_host": "http://portkey-portkey-gateway-ollama:11434",
     "model": "llama3",
 }
 
@@ -42,8 +42,8 @@ OLLAMA_CONFIG = {
 # Use short service names instead.
 LLAMA_FP8_CONFIG = {
     "provider": "openai",  # vLLM is OpenAI-compatible
-    "custom_host": "http://llama-32-1b-fp8-metrics:8080/v1",
-    "model": "llama-32-1b-fp8",
+    "custom_host": "http://portkey-portkey-gateway-vllm-metrics:8080/v1",
+    "model": "RedHatAI/granite-3.3-8b-instruct",
 }
 
 # =============================================================================
@@ -57,19 +57,18 @@ RHOAI_MODELS_NAMESPACE = os.environ.get("RHOAI_MODELS_NAMESPACE", "rhoai-models"
 RHOAI_VLLM_PRIMARY_CONFIG = {
     "provider": "openai",  # KServe vLLM exposes OpenAI-compatible API
     "custom_host": os.environ.get(
-        "RHOAI_VLLM_PRIMARY_HOST", "http://llama-32-1b-fp8-metrics:8080/v1"
+        "RHOAI_VLLM_PRIMARY_HOST", "http://portkey-portkey-gateway-vllm-metrics:8080/v1"
     ),
-    "model": os.environ.get("RHOAI_VLLM_PRIMARY_MODEL", "llama-32-1b-fp8"),
+    "model": os.environ.get("RHOAI_VLLM_PRIMARY_MODEL", "RedHatAI/granite-3.3-8b-instruct"),
 }
 
-# RHOAI vLLM Model - Secondary (for failover/load-balancing demos)
-# Note: Update custom_host when a secondary model is deployed
+# Secondary model (Ollama - for failover/load-balancing demos)
 RHOAI_VLLM_SECONDARY_CONFIG = {
-    "provider": "openai",
+    "provider": "ollama",
     "custom_host": os.environ.get(
-        "RHOAI_VLLM_SECONDARY_HOST", "http://mistral-7b-predictor:8080/v1"
+        "RHOAI_VLLM_SECONDARY_HOST", "http://portkey-portkey-gateway-ollama:11434"
     ),
-    "model": os.environ.get("RHOAI_VLLM_SECONDARY_MODEL", "mistralai/Mistral-7B-Instruct-v0.2"),
+    "model": os.environ.get("RHOAI_VLLM_SECONDARY_MODEL", "llama3"),
 }
 
 # Invalid endpoint (for fallback testing)
@@ -127,7 +126,7 @@ def print_config():
     print(f"    Model: {LLAMA_FP8_CONFIG['model']}")
     print(f"  - RHOAI Primary: {RHOAI_VLLM_PRIMARY_CONFIG['custom_host']}")
     print(f"    Model: {RHOAI_VLLM_PRIMARY_CONFIG['model']}")
-    print(f"  - RHOAI Secondary: {RHOAI_VLLM_SECONDARY_CONFIG['custom_host']}")
+    print(f"  - Secondary (Ollama): {RHOAI_VLLM_SECONDARY_CONFIG['custom_host']}")
     print(f"    Model: {RHOAI_VLLM_SECONDARY_CONFIG['model']}")
     print("=" * 60)
 

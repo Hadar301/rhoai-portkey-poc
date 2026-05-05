@@ -5,11 +5,11 @@ from llama_stack_client import LlamaStackClient
 Portkey doesn't automatically aggregate models from all backends - you need one client per provider to list their models separately.
 """
 client = LlamaStackClient(
-    base_url="https://portkey-gateway-hacohen-portkey.apps.ai-dev02.kni.syseng.devcluster.openshift.com/v1",
+    base_url="https://portkey-portkey-gateway-hacohen-portkey.apps.ai-dev01.kni.syseng.devcluster.openshift.com/v1",
     api_key="not-needed",
     default_headers={
         "x-portkey-provider": "ollama",
-        "x-portkey-custom-host": "http://portkey-gateway-ollama:11434",
+        "x-portkey-custom-host": "http://portkey-portkey-gateway-ollama:11434",
     },
 )
 
