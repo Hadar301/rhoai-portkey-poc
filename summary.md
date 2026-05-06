@@ -116,7 +116,7 @@ All demos were tested against a live OpenShift cluster.
 
 ### 3. Portkey Gateway Rejects FQDN Custom Hosts
 
-**Problem**: The Portkey gateway rejects fully-qualified domain names (`.svc.cluster.local`) in the `custom_host` field with "Invalid custom host" error.
+**Problem**: The Portkey gateway rejects fully-qualified domain names (FQDNs) ending in `.svc.cluster.local` in the `custom_host` field with "Invalid custom host" error. This limitation affects cross-namespace access.
 
 **Workaround**: Use short Kubernetes service names (e.g., `http://llama-32-1b-fp8-metrics:8080/v1` instead of `http://llama-32-1b-fp8-metrics.your-namespace.svc.cluster.local:8080/v1`). This works when the gateway and target services are in the same namespace.
 
@@ -124,7 +124,7 @@ All demos were tested against a live OpenShift cluster.
 
 **Problem**: The Portkey Python SDK appends `/chat/completions` directly to `base_url`. If `base_url` doesn't include `/v1`, requests get 404 errors.
 
-**Resolution**: Always use `GATEWAY_API_URL` (includes `/v1`) rather than `GATEWAY_URL` for SDK calls.
+**Resolution**: Always use `PORTKEY_GATEWAY_URL` with `/v1` suffix (e.g., `https://gateway-host/v1`) rather than the base URL for SDK calls.
 
 ### 5. Guardrails Config Format (Corrected)
 

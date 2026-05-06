@@ -457,7 +457,8 @@ def main():
     print(f"Embedding provider: ollama (model: {args.embedding_model})")
 
     # Redis configuration
-    redis_host = os.environ.get("REDIS_HOST", "localhost")
+    redis_host = os.environ.get("REDIS_HOST", "redis-service")  # Changed from localhost to generic service name
+    # Original default was "localhost" for local development
     redis_port = int(os.environ.get("REDIS_PORT", "6379"))
     redis_password = os.environ.get("REDIS_PASSWORD")
 

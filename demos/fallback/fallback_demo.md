@@ -11,24 +11,20 @@ The fallback demo illustrates key resilience features:
 - **Performance Measurement**: Quantifies overhead of fallback configuration
 - **Consistent Behavior**: Demonstrates reliability under multiple requests
 
+### Related Demos
+- **[Load Balancing Demo](../load_balance/load_balance_demo.md)** - Distribute requests across multiple providers (complementary resilience strategy)
+- **[Caching Demos](../caching/)** - Improve performance with Redis and semantic caching
+- **[Guardrails Demo](../guardrails/guardrails_demo.md)** - Add input/output validation to fallback flows
+
 ## Prerequisites
 
-- Portkey AI Gateway deployed on OpenShift
-- Ollama deployment accessible via gateway
-- Python 3.12+
-- Required packages: `portkey-ai>=2.1.0`, `tabulate>=0.9.0`
+See [Common Prerequisites](../SHARED_DEMO_ELEMENTS.md#common-prerequisites) for base requirements.
 
 ## Installation
 
-The demo is located in the `demos/fallback` directory:
+See [Common Installation Pattern](../SHARED_DEMO_ELEMENTS.md#common-installation-pattern) - this demo is in `demos/fallback`.
 
-```bash
-cd demos/fallback
-```
-
-All dependencies are already defined in the project's `pyproject.toml`.
-
-## Usage
+## Running the Demo
 
 ### Run All Tests
 
@@ -325,21 +321,7 @@ By default, fallback is triggered on any **non-2xx** HTTP status code. You can c
 
 ### Using the Config in Code
 
-```python
-from portkey_ai import Portkey
-
-client = Portkey(
-    base_url=GATEWAY_API_URL,
-    api_key="not-needed-for-self-hosted",
-    config=config  # Pass the fallback config
-)
-
-response = client.chat.completions.create(
-    model="llama3",
-    messages=[{"role": "user", "content": "Hello!"}],
-    max_tokens=100
-)
-```
+See [Common Configuration Code](../SHARED_DEMO_ELEMENTS.md#common-configuration-code) for Portkey client initialization pattern. The fallback-specific configuration is passed via the `config` parameter.
 
 ## Architecture
 
@@ -365,23 +347,33 @@ response = client.chat.completions.create(
 
 ## Key Takeaways
 
-1. **Resilience**: Fallback configuration provides automatic resilience without code changes
-2. **Low Overhead**: Minimal performance impact (~0.6s) when fallback is not triggered
-3. **Flexibility**: Control exactly which errors trigger fallback via `on_status_codes`
-4. **Transparency**: Easy to track which provider served each request
-5. **Production-Ready**: 100% success rate demonstrates reliability under load
+### ✓ Automatic Resilience
+- **Fallback configuration provides automatic resilience** without code changes
+- **100% success rate** demonstrates reliability under load
+- Easy to track which provider served each request
+
+### ✓ Performance Characteristics
+- **Low overhead**: Minimal performance impact (~0.6s) when fallback is not triggered
+- **Flexibility**: Control exactly which errors trigger fallback via `on_status_codes`
+- Production-ready for high-availability deployments
 
 ## Troubleshooting
 
-### All Requests Fail
+For comprehensive troubleshooting guidance, see **[TROUBLESHOOTING.md](../../TROUBLESHOOTING.md)**.
 
-**Issue**: Requests are failing even with fallback configured.
+### Quick Diagnostics
 
-**Solutions**:
-- Check that `PORTKEY_GATEWAY_URL` environment variable is set correctly
-- Verify LLM endpoints are accessible from the gateway
-- Check gateway logs: `oc logs -n your-namespace deployment/portkey-gateway`
-- Ensure Ollama pod is running: `oc get pods -n your-namespace`
+```bash
+# Check environment variables
+echo $PORTKEY_GATEWAY_URL
+
+# Verify gateway connectivity
+curl -X POST "$PORTKEY_GATEWAY_URL/chat/completions" -H "Content-Type: application/json" \
+  -d '{"model": "llama3", "messages": [{"role": "user", "content": "test"}], "max_tokens": 10}'
+
+# Check pod status
+oc get pods -l app.kubernetes.io/name=portkey-gateway
+```
 
 ### Fallback Not Triggering
 
@@ -406,23 +398,21 @@ response = client.chat.completions.create(
 
 ## Files
 
-- `fallback_demo.py` - Main demo script with CLI interface
-- `config.py` - Fallback-specific configuration helpers
-- `fallback_demo.md` - This documentation file
+See [Common File Structure Pattern](../SHARED_DEMO_ELEMENTS.md#common-file-structure-pattern). This demo includes fallback-specific configuration helpers in `config.py`.
 
 ## References
 
-- [Portkey Fallback Documentation](https://portkey.ai/docs/product/ai-gateway/fallbacks)
-- [Portkey Config Object Reference](https://portkey.ai/docs/api-reference/inference-api/config-object)
-- [Portkey Python SDK](https://github.com/Portkey-AI/portkey-python-sdk)
-- [Portkey Gateway GitHub](https://github.com/Portkey-AI/gateway)
+- [Portkey Fallback Documentation](https://portkey.ai/docs/product/ai-gateway/fallbacks) - Fallback-specific reference
+- See [Common References](../SHARED_DEMO_ELEMENTS.md#common-references) for general Portkey documentation
 
 ## Next Steps
 
-To extend this demo:
+### Combine with Other Features
+1. **[Load Balancing](../load_balance/load_balance_demo.md)**: Combine fallback with load balancing for comprehensive resilience
+2. **[Caching](../caching/redis_caching_demo.md)**: Add caching to reduce fallback frequency
+3. **[Guardrails](../guardrails/guardrails_demo.md)**: Apply validation to fallback responses
 
-1. **Load Balancing**: Add round-robin distribution across multiple providers
-2. **Retry Logic**: Demonstrate exponential backoff retry mechanism
-3. **Circuit Breaker**: Show how to prevent cascading failures
-4. **Metrics Export**: Integrate with Prometheus/Grafana for monitoring
-5. **Multi-Provider**: Test fallback across different LLM providers (OpenAI → Anthropic)
+### Extend This Demo
+4. **Retry Logic**: Demonstrate exponential backoff retry mechanism
+5. **Circuit Breaker**: Show how to prevent cascading failures
+6. **Multi-Provider**: Test fallback across different LLM providers (OpenAI → Anthropic)

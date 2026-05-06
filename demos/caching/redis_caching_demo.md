@@ -2,7 +2,12 @@
 
 ## Overview
 
-This demo demonstrates **real caching** using Redis deployed alongside the Portkey AI Gateway. Since the open-source Portkey gateway doesn't support per-request caching via the SDK, we implemented application-level caching using Redis directly.
+This demo demonstrates **exact-match caching** using Redis deployed alongside the Portkey AI Gateway. Since the open-source Portkey gateway doesn't support per-request caching via the SDK, we implemented application-level caching using Redis directly.
+
+### Related Demos
+- **[Semantic Caching Demo](../semantic_caching_demo.md)** - Advanced similarity-based caching using embeddings (compare with exact-match approach here)
+- **[Fallback Demo](../fallback/fallback_demo.md)** - Combine caching with automatic failover
+- **[Load Balancing Demo](../load_balance/load_balance_demo.md)** - Combine caching with load distribution
 
 ## Test Setup
 

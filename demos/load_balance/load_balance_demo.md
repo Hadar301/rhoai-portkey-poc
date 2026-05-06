@@ -11,25 +11,23 @@ The load balancing demo illustrates key distribution strategies:
 - **Multi-Provider Support**: Balance between different LLM providers (Ollama and LLaMA FP8)
 - **Performance Optimization**: Leverage faster providers for improved response times
 
+### Related Demos
+- **[Fallback Demo](../fallback/fallback_demo.md)** - Automatic failover when providers fail (complementary resilience strategy)
+- **[Caching Demos](../caching/)** - Improve performance with Redis and semantic caching
+- **[Guardrails Demo](../guardrails/guardrails_demo.md)** - Add input/output validation to load balancing flows
+
 ## Prerequisites
 
-- Portkey AI Gateway deployed on OpenShift
-- Ollama deployment accessible via gateway
-- LLaMA FP8 (vLLM) deployment accessible via gateway
-- Python 3.12+
-- Required packages: `portkey-ai>=2.1.0`, `tabulate>=0.9.0`
+See [Common Prerequisites](../SHARED_DEMO_ELEMENTS.md#common-prerequisites) for base requirements.
+
+**Additional for this demo:**
+- LLaMA FP8 (vLLM) deployment accessible via gateway for load balancing tests
 
 ## Installation
 
-The demo is located in the `demos/load_balance` directory:
+See [Common Installation Pattern](../SHARED_DEMO_ELEMENTS.md#common-installation-pattern) - this demo is in `demos/load_balance`.
 
-```bash
-cd demos/load_balance
-```
-
-All dependencies are already defined in the project's `pyproject.toml`.
-
-## Usage
+## Running the Demo
 
 ### Run All Tests
 
@@ -347,7 +345,6 @@ weights = [0.5, 0.3, 0.2]  # 50% / 30% / 20%
 ### Using the Config in Code
 
 ```python
-from portkey_ai import Portkey
 from load_balance.config import create_round_robin_config, create_weighted_config
 
 # Round-robin configuration
@@ -358,21 +355,9 @@ config = create_weighted_config(
     targets=[OLLAMA_CONFIG, LLAMA_FP8_CONFIG],
     weights=[0.25, 0.75]
 )
-
-# Create client with load balancing
-client = Portkey(
-    base_url=GATEWAY_API_URL,
-    api_key="not-needed-for-self-hosted",
-    config=config
-)
-
-# Make request - Portkey automatically routes to providers based on weights
-response = client.chat.completions.create(
-    model="llama3",  # Model specified in override_params per provider
-    messages=[{"role": "user", "content": "Hello!"}],
-    max_tokens=100
-)
 ```
+
+For client initialization and request patterns, see [Common Configuration Code](../SHARED_DEMO_ELEMENTS.md#common-configuration-code). The load balancing configuration is passed via the `config` parameter.
 
 ## Architecture
 
@@ -511,22 +496,17 @@ weights = [0.95, 0.05]  # 95% stable, 5% new provider
 
 ## Files
 
-- `load_balance_demo.py` - Main demo script with CLI interface
-- `config.py` - Load balancing configuration helpers
-- `load_balance_demo.md` - This documentation file
+See [Common File Structure Pattern](../SHARED_DEMO_ELEMENTS.md#common-file-structure-pattern). This demo includes load balancing-specific configuration helpers in `config.py`.
 
 ## References
 
-- [Portkey Load Balancing Documentation](https://portkey.ai/docs/product/ai-gateway/load-balancing)
-- [Portkey Config Object Reference](https://portkey.ai/docs/api-reference/inference-api/config-object)
-- [Portkey Python SDK](https://github.com/Portkey-AI/portkey-python-sdk)
-- [Portkey Gateway GitHub](https://github.com/Portkey-AI/gateway)
+- [Portkey Load Balancing Documentation](https://portkey.ai/docs/product/ai-gateway/load-balancing) - Load balancing-specific reference
+- See [Common References](../SHARED_DEMO_ELEMENTS.md#common-references) for general Portkey documentation
 
 ## Next Steps
 
-To extend this demo:
-
-1. **Combine with Fallback**: Add fallback strategy for resilience
+### Combine with Other Features
+1. **[Combine with Fallback](../fallback/fallback_demo.md)**: Add fallback strategy for resilience
    ```python
    # Load balance with fallback
    config = {

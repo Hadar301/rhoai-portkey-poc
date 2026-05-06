@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NAMESPACE="hacohen-portkey"
+# Use environment variable or default to example namespace
+NAMESPACE="${DEMO_NAMESPACE:-example-namespace}"
+# Original: "hacohen-portkey"
+
+# Service names - can be overridden with environment variables
+REDIS_SECRET_NAME="${REDIS_SECRET_NAME:-redis-secret}"  # Generic secret name
+REDIS_SERVICE_NAME="${REDIS_SERVICE_NAME:-redis-service}"  # Generic service name
+# Original service names: portkey-redis, portkey-redis-master
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PF_PID=""
@@ -20,7 +27,8 @@ cleanup() {
         kill $pids 2>/dev/null || true
     fi
     # Kill any orphaned oc port-forward processes started by this script
-    pkill -f "oc port-forward svc/portkey-redis-master" 2>/dev/null || true
+    pkill -f "oc port-forward svc/${REDIS_SERVICE_NAME}" 2>/dev/null || true
+    # Original: "oc port-forward svc/portkey-redis-master"
     echo "[cleanup] Done."
 }
 trap cleanup EXIT INT TERM HUP
@@ -46,7 +54,8 @@ fi
 # --- Redis setup ---
 echo
 echo "[setup] Fetching Redis password..."
-REDIS_PASSWORD=$(oc get secret portkey-redis -n "$NAMESPACE" -o jsonpath='{.data.redis-password}' | base64 -d)
+REDIS_PASSWORD=$(oc get secret "${REDIS_SECRET_NAME}" -n "$NAMESPACE" -o jsonpath='{.data.redis-password}' | base64 -d)
+# Original: portkey-redis
 export REDIS_PASSWORD
 
 echo "[setup] Starting Redis port-forward (6379)..."
@@ -56,7 +65,8 @@ if [[ -n "$EXISTING_PF" ]]; then
     kill $EXISTING_PF 2>/dev/null || true
     sleep 1
 fi
-oc port-forward svc/portkey-redis-master 6379:6379 -n "$NAMESPACE" &>/dev/null &
+oc port-forward svc/"${REDIS_SERVICE_NAME}" 6379:6379 -n "$NAMESPACE" &>/dev/null &
+# Original: svc/portkey-redis-master
 PF_PID=$!
 sleep 2
 
