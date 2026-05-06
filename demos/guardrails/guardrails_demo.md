@@ -4,6 +4,11 @@
 
 This demo showcases Portkey's built-in guardrails system, which is available in the **open-source gateway**. The OSS gateway includes ~15 deterministic guardrail checks (regex matching, JSON schema, word count, code detection, etc.). LLM-based checks (toxicity, prompt injection, gibberish detection) are available in the Enterprise/SaaS version.
 
+### Related Demos
+- **[Fallback Demo](../fallback/fallback_demo.md)** - Combine guardrails with automatic failover for robust error handling
+- **[Load Balancing Demo](../load_balance/load_balance_demo.md)** - Add validation to load balanced requests
+- **[Caching Demos](../caching/)** - Apply guardrails to cached and uncached responses
+
 ## Guardrails vs LiteLLM/LlamaGuard
 
 | Aspect | Portkey Guardrails | LiteLLM + LlamaGuard |
@@ -113,3 +118,15 @@ Each guardrail is a dict with reserved keys and check definitions:
 |--------------|-----------------|-------------|
 | `true` | Block request immediately | 446 |
 | `false` | Allow request, log result | 200 |
+
+## Key Takeaways
+
+### ✓ Built-in Security Layer
+- **~15 deterministic checks** available in OSS gateway with no additional infrastructure
+- **Sub-millisecond latency** for regex, schema, and content validation
+- **No GPU required** for core safety features (unlike LlamaGuard)
+
+### ✓ Production-Ready Configuration
+- **Config-driven setup** with camelCase check IDs
+- **Flexible blocking behavior** - deny immediately or allow with logging
+- **Input and output validation** - protect both sides of LLM interactions

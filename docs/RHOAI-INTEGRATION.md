@@ -24,6 +24,26 @@ GPU Node (model inference)
 2. At least one model deployed as a KServe InferenceService
 3. Portkey gateway deployed (using the Helm chart in this repo)
 
+### Prerequisites Verification
+
+```bash
+# Verify OpenShift cluster access
+oc get nodes
+
+# Verify RHOAI installation
+oc get operators -A | grep rhods
+
+# Verify KServe models are deployed and ready
+oc get inferenceservices -A
+
+# Verify Portkey gateway is running
+oc get pods -l app.kubernetes.io/name=portkey-gateway
+oc get routes -l app.kubernetes.io/name=portkey-gateway
+
+# Check gateway health
+curl -I "https://$(oc get route portkey-gateway -o jsonpath='{.spec.host}')/health"
+```
+
 ## Step 1: Identify RHOAI Model Endpoints
 
 List your KServe InferenceServices:
@@ -35,12 +55,17 @@ oc get inferenceservices -n <rhoai-namespace> -o custom-columns=\
   READY:.status.conditions[?\(@.type==\"Ready\"\)].status
 ```
 
-**Important**: The Portkey gateway rejects fully-qualified domain names (`.svc.cluster.local`) as "Invalid custom host". Use short Kubernetes service names instead. This works when the gateway and model are in the **same namespace**:
+**Important**: The Portkey gateway rejects fully-qualified domain names (FQDNs) ending in `.svc.cluster.local` as "Invalid custom host". This limitation affects cross-namespace access.
+
+**Same-namespace access**: Use short service names when the gateway and model are in the same namespace:
 ```
 http://<service-name>:8080/v1
 ```
 
-For cross-namespace access, use environment variables or in-cluster DNS with short names if possible.
+**Cross-namespace access**: Use either:
+1. Short service names if DNS resolution works: `http://model-name:8080/v1`
+2. FQDNs without `.svc.cluster.local` suffix require NetworkPolicy egress rules
+3. See [Known Issues in summary.md](../summary.md#known-issues) for networking limitations
 
 ## Step 2: Configure Portkey
 
@@ -93,7 +118,7 @@ uv run python demos/guardrails/guardrails_demo.py --provider rhoai-primary
 
 ### Custom Host Limitation
 
-The Portkey gateway validates `custom_host` values and rejects FQDNs containing `.svc.cluster.local`. Use short service names:
+The Portkey gateway validates `custom_host` values and rejects fully-qualified domain names (FQDNs) containing `.svc.cluster.local`. Use short service names:
 
 ```python
 # Correct (short service name)
@@ -118,14 +143,20 @@ RHOAI_CONFIG = {
 
 ## Troubleshooting
 
-### Connection Refused
+For comprehensive RHOAI troubleshooting, see **[TROUBLESHOOTING.md](../TROUBLESHOOTING.md#rhoai-integration-issues)**.
 
-1. Check the InferenceService is ready: `oc get inferenceservice -n <namespace>`
-2. Verify the predictor pod is running: `oc get pods -n <namespace>`
-3. Test direct connectivity: `oc exec -n portkey-gateway deploy/portkey-gateway -- curl -s http://<endpoint>/v1/models`
+### Quick Diagnostics
 
-### Model Not Found
+```bash
+# Verify InferenceService status
+oc get inferenceservice -n rhoai-models
 
-If you get "model not found" errors:
-1. Check the model name: `curl http://<endpoint>/v1/models`
-2. The model name must match what vLLM reports (usually the HuggingFace model ID)
+# Test model endpoint directly
+curl http://model-service:8080/v1/models
+
+# Test gateway to model connectivity
+oc exec -n portkey-gateway deploy/portkey-gateway -- \
+  curl -s http://llama-32-1b-fp8-metrics:8080/v1/models
+```
+
+**Common issues**: FQDN rejection, cross-namespace networking, model name mismatches. See the main troubleshooting guide for detailed solutions.

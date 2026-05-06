@@ -4,6 +4,11 @@
 
 This demo compares **simple (exact-match) caching** with **semantic caching**. While Portkey's OSS gateway supports simple Redis caching, this demo implements a semantic cache layer using real embeddings from Ollama (via the Portkey gateway) to demonstrate the concept and benefits.
 
+### Related Demos
+- **[Redis Caching Demo](../redis_caching_demo.md)** - Exact-match caching implementation and performance benchmarks
+- **[Fallback Demo](../fallback/fallback_demo.md)** - Combine semantic caching with automatic failover
+- **[Load Balancing Demo](../load_balance/load_balance_demo.md)** - Combine semantic caching with load distribution
+
 ## Why Semantic Caching?
 
 Real-world users ask the same question in different ways:
@@ -77,8 +82,14 @@ Query → Portkey Gateway → Ollama → Embedding vector
 
 Embeddings are always generated via Ollama (which supports the OpenAI-compatible `/v1/embeddings` endpoint). Chat completions can use any provider (Ollama, vLLM, RHOAI models).
 
-## Cost Savings
+## Key Takeaways
 
-- **Cache hit rate improvement**: Semantic caching catches paraphrased queries that exact-match misses entirely
-- **Latency reduction**: Cache hits return in milliseconds vs 1-2s for LLM calls
-- **Cost reduction**: Proportional to cache hit rate improvement
+### ✓ Intelligent Cache Matching
+- **67% hit rate** on paraphrased queries vs 0% for exact-match caching
+- **Real embeddings** from Ollama via Portkey gateway (no extra ML dependencies)
+- **Configurable similarity threshold** for precision vs recall tuning
+
+### ✓ Production Benefits
+- **Cache hit rate improvement** catches paraphrased queries that exact-match misses entirely
+- **Latency reduction** - cache hits return in milliseconds vs 1-2s for LLM calls
+- **Cost reduction** proportional to improved cache hit rate

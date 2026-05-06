@@ -2,6 +2,15 @@
 
 Deploy the open-source [Portkey AI Gateway](https://github.com/Portkey-AI/gateway) on Red Hat OpenShift with RHOAI integration and production-ready features.
 
+## Documentation Reading Guide
+
+**Recommended order** for new users:
+1. **Overview & Quick Start** (this file) - Start here for installation and basic concepts
+2. **[RHOAI Integration](docs/RHOAI-INTEGRATION.md)** - If connecting to RHOAI KServe models
+3. **[Comparison Matrix](docs/COMPARISON-MATRIX.md)** - If evaluating vs LiteLLM
+4. **[Summary Report](summary.md)** - For known issues and production deployment guidance
+5. **Demo Documentation** - Feature-specific guides linked below
+
 ## Overview
 
 The Portkey AI Gateway is an open-source AI gateway that routes requests to 250+ LLMs with features like:
@@ -13,6 +22,8 @@ The Portkey AI Gateway is an open-source AI gateway that routes requests to 250+
 - **Guardrails**: Built-in input/output validation checks (regex, schema, word count, code detection)
 - **RHOAI Integration**: Route to KServe-deployed models via OpenAI-compatible API
 - **Production Ready**: HA deployment, NetworkPolicy, PodDisruptionBudget
+
+> **Important**: Many advanced features (Prometheus metrics, semantic caching, 60+ guardrails, admin dashboard) are **Enterprise-only** and not available in the OSS gateway. See [Enterprise-Only Features](#enterprise-only-features-not-available-in-oss) for details. All demos use OSS-compatible features only.
 
 ## Architecture
 
@@ -135,6 +146,22 @@ secrets:
 
 ## Demos
 
+### Demo Selection Guide
+
+**For resilience and reliability:**
+- Start with **[Fallback Demo](demos/fallback/fallback_demo.md)** - Learn automatic failover
+- Then try **[Load Balancing Demo](demos/load_balance/load_balance_demo.md)** - Distribute traffic for performance
+
+**For performance optimization:**
+- **[Redis Caching Demo](demos/caching/redis_caching_demo.md)** - 12.8x speedup with exact-match caching
+- **[Semantic Caching Demo](demos/caching/semantic_caching_demo.md)** - 67% hit rate on paraphrased queries
+
+**For safety and compliance:**
+- **[Guardrails Demo](demos/guardrails/guardrails_demo.md)** - Block PII, validate schemas, detect code
+
+**For RHOAI integration:**
+- **[RHOAI Connectivity Test](demos/rhoai/connectivity_test.py)** - Verify KServe model access
+
 ### Available Demos
 
 | Demo | Description | Command |
@@ -146,20 +173,45 @@ secrets:
 | **Guardrails** | Input/output validation (PII, schema) | `uv run python demos/guardrails/guardrails_demo.py` |
 | **RHOAI Connectivity** | Test RHOAI model connectivity | `uv run python demos/rhoai/connectivity_test.py` |
 
-### Running Demos
+### Environment Variables and Configuration
+
+The demo configuration flows from multiple sources in this order of precedence:
+
+1. **Environment variables** (highest priority) - Override all other settings
+2. **`demos/config.py`** - Default provider configurations  
+3. **Command-line flags** - Provider selection and scenarios
+
+#### Required Environment Variables
 
 ```bash
-# Install Python dependencies
+# Install Python dependencies first
 uv sync
 
-# Set gateway URL
-export PORTKEY_GATEWAY_URL="https://$(oc get route portkey-gateway -o jsonpath='{.spec.host}')"
+# Gateway access (required for all demos)
+export PORTKEY_GATEWAY_URL="https://$(oc get route portkey-gateway -o jsonpath='{.spec.host}')/v1"
 
-# For caching demos, also set Redis credentials
+# Redis access (required for caching demos only)
 export REDIS_PASSWORD=$(oc get secret portkey-gateway-redis -o jsonpath='{.data.redis-password}' | base64 -d)
 
-# Run a demo
+# RHOAI access (required only if using --provider rhoai-primary)
+export RHOAI_VLLM_PRIMARY_HOST="http://llama-32-1b-fp8-metrics:8080/v1"  # Use short service names
+export RHOAI_VLLM_PRIMARY_MODEL="llama-32-1b-fp8"
+
+# Verify connectivity
+curl -X POST "$PORTKEY_GATEWAY_URL/chat/completions" -H "Content-Type: application/json" \
+  -d '{"model": "llama3", "messages": [{"role": "user", "content": "test"}], "max_tokens": 10}'
+```
+
+#### Running Demos
+```bash
+# Basic demo (uses Ollama by default)
 uv run python demos/guardrails/guardrails_demo.py --scenario all --provider ollama
+
+# Using RHOAI models (requires RHOAI_* environment variables)
+uv run python demos/fallback/fallback_demo.py --provider rhoai-primary
+
+# Multiple scenarios
+uv run python demos/caching/redis_caching_demo.py  # Requires REDIS_PASSWORD
 ```
 
 ### Using RHOAI Models in Demos
@@ -175,7 +227,7 @@ export RHOAI_VLLM_PRIMARY_MODEL="llama-32-1b-fp8"
 uv run python demos/guardrails/guardrails_demo.py --provider rhoai-primary
 ```
 
-**Note**: The Portkey gateway rejects FQDN hostnames (`.svc.cluster.local`) as "Invalid custom host". Use short Kubernetes service names instead. See [RHOAI Integration Guide](docs/RHOAI-INTEGRATION.md) for details.
+> **Important**: The Portkey gateway rejects fully-qualified domain names (FQDNs) ending in `.svc.cluster.local` as "Invalid custom host". This limitation affects cross-namespace access. Use short Kubernetes service names when connecting to models in the same namespace. See [RHOAI Integration Guide](docs/RHOAI-INTEGRATION.md) for cross-namespace workarounds.
 
 ## Production Features
 
@@ -235,6 +287,8 @@ portkey/
 |----------|-------------|
 | [RHOAI Integration](docs/RHOAI-INTEGRATION.md) | How to connect to RHOAI KServe models |
 | [Comparison Matrix](docs/COMPARISON-MATRIX.md) | Portkey vs LiteLLM feature comparison |
+| [Troubleshooting Guide](TROUBLESHOOTING.md) | Common issues and solutions across all components |
+| [Summary Report](summary.md) | POC status, test results, and known issues |
 | [Guardrails Demo](demos/guardrails/guardrails_demo.md) | Guardrails demo documentation |
 | [Semantic Caching](demos/caching/semantic_caching_demo.md) | Semantic caching demo documentation |
 
