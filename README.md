@@ -181,26 +181,44 @@ The demo configuration flows from multiple sources in this order of precedence:
 2. **`demos/config.py`** - Default provider configurations  
 3. **Command-line flags** - Provider selection and scenarios
 
-#### Required Environment Variables
+#### Configuration Setup
 
+**Quick Start - Copy the example configuration:**
+```bash
+# Copy environment template and customize with your values
+cp .env.example .env
+# Edit .env with your specific cluster/namespace details
+```
+
+**Or set variables manually:**
 ```bash
 # Install Python dependencies first
 uv sync
 
-# Gateway access (required for all demos)
+# Required: Gateway access (for all demos)
 export PORTKEY_GATEWAY_URL="https://$(oc get route portkey-gateway -o jsonpath='{.spec.host}')/v1"
 
-# Redis access (required for caching demos only)
-export REDIS_PASSWORD=$(oc get secret portkey-gateway-redis -o jsonpath='{.data.redis-password}' | base64 -d)
+# Required: Demo namespace 
+export DEMO_NAMESPACE="your-namespace"  # Namespace where Portkey gateway is deployed
 
-# RHOAI access (required only if using --provider rhoai-primary)
-export RHOAI_VLLM_PRIMARY_HOST="http://llama-32-1b-fp8-metrics:8080/v1"  # Use short service names
-export RHOAI_VLLM_PRIMARY_MODEL="llama-32-1b-fp8"
+# Required for caching demos: Redis access
+export REDIS_PASSWORD=$(oc get secret portkey-gateway-redis -o jsonpath='{.data.redis-password}' | base64 -d)
+export REDIS_HOST="redis-service"  # Or use actual service name from your deployment
+
+# Optional: Override service endpoints (if different from defaults)
+export OLLAMA_SERVICE_HOST="http://your-ollama-service:11434"
+export VLLM_SERVICE_HOST="http://your-vllm-service:8080/v1"
+
+# Optional: RHOAI integration (required only if using --provider rhoai-primary)
+export RHOAI_VLLM_PRIMARY_HOST="http://your-model-service:8080/v1"  # Use short service names
+export RHOAI_VLLM_PRIMARY_MODEL="your-model-name"
 
 # Verify connectivity
 curl -X POST "$PORTKEY_GATEWAY_URL/chat/completions" -H "Content-Type: application/json" \
   -d '{"model": "llama3", "messages": [{"role": "user", "content": "test"}], "max_tokens": 10}'
 ```
+
+> **Note**: All configuration values have sensible defaults. See [.env.example](.env.example) for complete configuration options and examples.
 
 #### Running Demos
 ```bash
@@ -220,8 +238,10 @@ All demos support the `--provider` flag:
 
 ```bash
 # Set RHOAI model endpoints (use short service names, not FQDNs)
-export RHOAI_VLLM_PRIMARY_HOST="http://llama-32-1b-fp8-metrics:8080/v1"
-export RHOAI_VLLM_PRIMARY_MODEL="llama-32-1b-fp8"
+export RHOAI_VLLM_PRIMARY_HOST="http://your-model-service:8080/v1"  # Replace with your actual model service name
+export RHOAI_VLLM_PRIMARY_MODEL="your-model-name"  # Replace with your actual model name
+# Example: export RHOAI_VLLM_PRIMARY_HOST="http://llama-32-1b-fp8-metrics:8080/v1"
+# Example: export RHOAI_VLLM_PRIMARY_MODEL="llama-32-1b-fp8"
 
 # Run with RHOAI provider
 uv run python demos/guardrails/guardrails_demo.py --provider rhoai-primary

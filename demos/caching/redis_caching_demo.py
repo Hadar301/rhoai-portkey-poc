@@ -410,9 +410,10 @@ Environment Variables:
     print(f"Custom host: {provider_config['custom_host']}")
 
     # Redis configuration
-    # Default to in-cluster service name (works from within the cluster)
-    # For local development, use port-forward: kubectl port-forward svc/portkey-gateway-redis-master 6379:6379
-    redis_host = os.environ.get("REDIS_HOST", "localhost")
+    # Default to generic service name for examples (use environment variable to override)
+    # For local development, use port-forward: kubectl port-forward svc/redis-service 6379:6379
+    redis_host = os.environ.get("REDIS_HOST", "redis-service")  # Changed from localhost to generic service name
+    # Original default was "localhost" for local development
     redis_port = int(os.environ.get("REDIS_PORT", "6379"))
     redis_password = os.environ.get("REDIS_PASSWORD")
 
